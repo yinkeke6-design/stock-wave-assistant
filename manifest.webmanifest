@@ -1,0 +1,9 @@
+{
+  "name": "A股波段助手",
+  "short_name": "波段助手",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b1220",
+  "theme_color": "#101827",
+  "icons": []
+}
