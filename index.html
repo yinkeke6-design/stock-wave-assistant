@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#101827"><title>A股波段助手</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header><div class="brand">📈 A股波段助手</div><div id="marketStatus" class="status">行情加载中…</div></header>
+<main>
+  <section class="hero">
+    <div class="eyebrow">收盘后观察 · 趋势跟随</div>
+    <h1>找趋势，等回调</h1>
+    <p>基于公开行情的辅助筛选。不是实时交易信号，不自动下单。</p>
+    <div class="actions"><button id="scanBtn">开始波段筛选</button><button class="secondary" id="refreshBtn">刷新行情</button></div>
+  </section>
+  <section class="stats">
+    <div><span>扫描股票</span><strong id="count">—</strong></div>
+    <div><span>符合观察条件</span><strong id="qualified">—</strong></div>
+    <div><span>行情日期</span><strong id="date">—</strong></div>
+  </section>
+  <section class="panel">
+    <div class="section-head"><h2>波段观察名单</h2><span id="scanHint">等待筛选</span></div>
+    <div id="results" class="results"><div class="empty">点击“开始波段筛选”获取候选股。</div></div>
+  </section>
+  <section class="panel">
+    <div class="section-head"><h2>自选股</h2><span>保存在本机浏览器</span></div>
+    <div id="watchlist" class="results"><div class="empty">暂时没有自选股。</div></div>
+  </section>
+  <section class="notice">
+    <b>使用说明</b>
+    <p>筛选结果仅用于研究。公开行情接口可能延迟、限流或调整；遇到数据异常会显示错误，不会用虚构数据补齐。买卖前请自行核对交易软件中的最新行情。</p>
+  </section>
+</main>
+<footer>版本 0.1 · 行情来源：东方财富公开行情接口（非官方接口）</footer>
+<script src="/app.js"></script>
+</body></html>
