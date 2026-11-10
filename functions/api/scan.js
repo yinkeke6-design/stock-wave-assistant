@@ -40,7 +40,7 @@ function analyze(rows,q,b){
 export async function onRequestGet({request}){latestMarketDate="";const u=new URL(request.url);if(!u.pathname.endsWith("/api/scan"))return json({ok:false,error:"Not found"},404);try{
  const boardUrl=BASE+"/api/qt/clist/get?pn=1&pz=500&po=1&np=1&fltt=2&invt=2&fid=f3&fs=m:90+t:2,m:90+t:3&fields=f12,f14,f2,f3,f5,f6,f8";
  let br;try{br=await getJson(boardUrl)}catch(e){throw new Error("获取强势板块列表失败："+e.message)}
- const boards=(br?.data?.diff||[]).filter(x=>x.f12&&x.f14&&Number(x.f2)>0).sort((a,b)=>(Number(b.f3)||0)-(Number(a.f3)||0)).slice(0,8).map(x=>({code:String(x.f12),name:String(x.f14),change:Number(x.f3)||0}));
+ const nonIndustryBoard=/昨日连板|连板|历史新高|阶段新高|昨日涨停|昨日跌停|涨停家数|跌停家数|昨日首板|昨日炸板|昨日反包|昨日连涨|昨日连跌|昨日振幅|昨日换手|昨日成交额/;\n const boards=(br?.data?.diff||[]).filter(x=>x.f12&&x.f14&&Number(x.f2)>0&&!nonIndustryBoard.test(String(x.f14))).sort((a,b)=>(Number(b.f3)||0)-(Number(a.f3)||0)).slice(0,8).map(x=>({code:String(x.f12),name:String(x.f14),change:Number(x.f3)||0}));
  if(!boards.length)throw new Error("未取得板块列表，可能是行情接口调整或限流");
  const groupResults=await pool(boards,4,async b=>{
   const url=BASE+"/api/qt/clist/get?pn=1&pz=80&po=1&np=1&fltt=2&invt=2&fid=f6&fs=b:"+b.code+"&fields=f12,f14,f2,f3,f5,f6,f8";
@@ -55,5 +55,5 @@ export async function onRequestGet({request}){latestMarketDate="";const u=new UR
  const stages=["即将突破观察","刚刚放量突破","突破回踩确认"];
  const items=stages.flatMap(s=>unique.filter(x=>x.stage===s).sort((a,b)=>b.score-a.score).slice(0,15));
  const date=latestMarketDate||groups.flatMap(g=>g.items||[]).map(x=>x.date).filter(Boolean).sort().at(-1)||"—";
- return json({ok:true,scanned:groups.reduce((n,g)=>n+(g.members||0),0),qualified:unique.length,items,boards:groups.map(g=>({name:g.board.name,change:g.board.change,count:(g.items||[]).length})),failedBoards:failed.length,date,note:"扫描涨幅靠前的最多8个板块，每板块最多15只成分股，先控制请求量以避免行情接口长时间无响应。候选须满足箱体宽度不超过25%、近期振幅收敛及趋势条件；无合格标的不凑数。"}
+ return json({ok:true,scanned:groups.reduce((n,g)=>n+(g.members||0),0),qualified:unique.length,items,boards:groups.map(g=>({name:g.board.name,change:g.board.change,count:(g.items||[]).length})),failedBoards:failed.length,date,note:"扫描涨幅靠前且排除连板、新高等行情标签的最多8个板块，每板块最多15只成分股；这里只做第一层板块过滤，行业归属仍需核对。候选须满足箱体宽度不超过25%、近期振幅收敛及趋势条件；无合格标的不凑数。"}
  )}catch(e){return json({ok:false,error:"扫描失败："+e.message},502)}}
