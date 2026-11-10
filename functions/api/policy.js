@@ -25,14 +25,14 @@ function absolute(href,base){try{return new URL(href,base).href}catch{return""}}
 async function fetchPage(url){const r=await fetch(url,{headers:{"User-Agent":"Mozilla/5.0 (compatible; ASharePolicyBot/1.0)","Accept":"text/html,application/xhtml+xml"},signal:AbortSignal.timeout(8000)});if(!r.ok)throw new Error("政策网站 HTTP "+r.status);return await r.text()}
 function getLinks(html,base){
  const out=[];
- const re=/<a\\b[^>]*href=["']([^"']+)["'][^>]*>([\\s\\S]*?)<\\/a>/gi;
+ const re=/<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
  const allowedTitle=/^(国务院|国务院办公厅|中共中央|中共中央办公厅|国家发展改革委|财政部|工业和信息化部|国家能源局|国家数据局|国家卫生健康委).{0,80}(关于|发布|印发|公布|制定|实施|条例|办法|规定|规划|方案|意见|通知|决定)/;
  const formalEnd=/(条例|办法|规定|规划纲要|行动计划|实施方案|指导意见|若干措施|决定|通知|意见)$/;
  while(true){
   const m=re.exec(html);if(!m)break;
   const title=clean(m[2]),url=absolute(m[1],base);
   if(title.length<8||title.length>100||NOISE.test(title)||/选举|节假日|放假|答记者问|新闻发布会|政策文件库|查询|征集|征求意见|解读|调研|考察|以人民为中心/.test(title))continue;
-  if(!url||!/(^|\\.)gov\\.cn$/.test(new URL(url).hostname)||url===base)continue;
+  if(!url||!/(^|\.)gov\.cn$/.test(new URL(url).hostname)||url===base)continue;
   const path=new URL(url).pathname;
   if(!path.includes("/zhengce/content/"))continue;
   if(!(allowedTitle.test(title)||formalEnd.test(title)))continue;
