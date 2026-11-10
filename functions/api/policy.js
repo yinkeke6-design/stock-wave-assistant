@@ -28,7 +28,7 @@ function extractDoc(html,link,source){
  const title=clean((html.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/i)||[])[1]||(html.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i)||[])[1]||link.title);
  const date= dateFrom(html.match(/20\d{2}[年./-]\d{1,2}[月./-]\d{1,2}日?/ )?.[0]||"");
  const main=(html.match(/<(?:div|article)[^>]*(?:id|class)=["'][^"']*(?:文章|正文|content|article|TRS_Editor)[^"']*["'][^>]*>([\s\S]*?)<\/(?:div|article)>/i)||[])[1]||html;
- const body=clean(main).slice(0,14000);
+ const extracted=clean(main);const body=(extracted.length>=180?extracted:clean(html)).slice(0,14000);
  if(body.length<180)return null;
  const combined=title+" "+body;
  const themes=classify(combined);
