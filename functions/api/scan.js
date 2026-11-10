@@ -46,7 +46,7 @@ export async function onRequestGet({request}){const u=new URL(request.url);if(!u
   const data=await getJson(url);
   const members=(data?.data?.diff||[]).filter(x=>x.f12&&x.f14&&Number(x.f2)>0&&!String(x.f14).includes("ST")).slice(0,35);
   const found=await pool(members,6,async q=>analyze(await kline(String(q.f12)),q,b));
-  return{board:b,members:members.length,validKlines:found.filter(x=>x!==null).length,items:found.filter(Boolean)}
+  return{board:b,members:members.length,items:found.filter(Boolean)}
  });
  const failed=groupResults.filter(g=>!g),groups=groupResults.filter(Boolean);
  if(!groups.length)throw new Error("所有强势板块成分股请求均失败，请稍后重试或检查行情接口");
@@ -54,5 +54,5 @@ export async function onRequestGet({request}){const u=new URL(request.url);if(!u
  const stages=["即将突破观察","刚刚放量突破","突破回踩确认"];
  const items=stages.flatMap(s=>unique.filter(x=>x.stage===s).sort((a,b)=>b.score-a.score).slice(0,15));
  const date=groups.flatMap(g=>g.items||[]).map(x=>x.date).filter(Boolean).sort().at(-1)||"—";
- return json({ok:true,scanned:groups.reduce((n,g)=>n+(g.members||0),0),validKlines:groups.reduce((n,g)=>n+(g.validKlines||0),0),qualified:unique.length,items,boards:groups.map(g=>({name:g.board.name,change:g.board.change,count:(g.items||[]).length})),failedBoards:failed.length,date,note:"扫描涨幅靠前的最多12个板块，每板块最多35只成分股。候选须满足箱体宽度不超过25%、近期振幅收敛及趋势条件；无合格标的不凑数。"}
+ return json({ok:true,scanned:groups.reduce((n,g)=>n+(g.members||0),0),qualified:unique.length,items,boards:groups.map(g=>({name:g.board.name,change:g.board.change,count:(g.items||[]).length})),failedBoards:failed.length,date,note:"扫描涨幅靠前的最多12个板块，每板块最多35只成分股。候选须满足箱体宽度不超过25%、近期振幅收敛及趋势条件；无合格标的不凑数。"}
  )}catch(e){return json({ok:false,error:"扫描失败："+e.message},502)}}
