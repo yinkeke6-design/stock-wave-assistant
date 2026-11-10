@@ -40,13 +40,13 @@ function analyze(rows,q,b){
 export async function onRequestGet({request}){latestMarketDate="";const u=new URL(request.url);if(!u.pathname.endsWith("/api/scan"))return json({ok:false,error:"Not found"},404);try{
  const boardUrl=BASE+"/api/qt/clist/get?pn=1&pz=500&po=1&np=1&fltt=2&invt=2&fid=f3&fs=m:90+t:2,m:90+t:3&fields=f12,f14,f2,f3,f5,f6,f8";
  let br;try{br=await getJson(boardUrl)}catch(e){throw new Error("获取强势板块列表失败："+e.message)}
- const boards=(br?.data?.diff||[]).filter(x=>x.f12&&x.f14&&Number(x.f2)>0).sort((a,b)=>(Number(b.f3)||0)-(Number(a.f3)||0)).slice(0,12).map(x=>({code:String(x.f12),name:String(x.f14),change:Number(x.f3)||0}));
+ const boards=(br?.data?.diff||[]).filter(x=>x.f12&&x.f14&&Number(x.f2)>0).sort((a,b)=>(Number(b.f3)||0)-(Number(a.f3)||0)).slice(0,8).map(x=>({code:String(x.f12),name:String(x.f14),change:Number(x.f3)||0}));
  if(!boards.length)throw new Error("未取得板块列表，可能是行情接口调整或限流");
- const groupResults=await pool(boards,3,async b=>{
+ const groupResults=await pool(boards,4,async b=>{
   const url=BASE+"/api/qt/clist/get?pn=1&pz=80&po=1&np=1&fltt=2&invt=2&fid=f6&fs=b:"+b.code+"&fields=f12,f14,f2,f3,f5,f6,f8";
   const data=await getJson(url);
-  const members=(data?.data?.diff||[]).filter(x=>x.f12&&x.f14&&Number(x.f2)>0&&!String(x.f14).includes("ST")).slice(0,35);
-  const found=await pool(members,6,async q=>analyze(await kline(String(q.f12)),q,b));
+  const members=(data?.data?.diff||[]).filter(x=>x.f12&&x.f14&&Number(x.f2)>0&&!String(x.f14).includes("ST")).slice(0,15);
+  const found=await pool(members,8,async q=>analyze(await kline(String(q.f12)),q,b));
   return{board:b,members:members.length,items:found.filter(Boolean)}
  });
  const failed=groupResults.filter(g=>!g),groups=groupResults.filter(Boolean);
@@ -55,5 +55,5 @@ export async function onRequestGet({request}){latestMarketDate="";const u=new UR
  const stages=["即将突破观察","刚刚放量突破","突破回踩确认"];
  const items=stages.flatMap(s=>unique.filter(x=>x.stage===s).sort((a,b)=>b.score-a.score).slice(0,15));
  const date=latestMarketDate||groups.flatMap(g=>g.items||[]).map(x=>x.date).filter(Boolean).sort().at(-1)||"—";
- return json({ok:true,scanned:groups.reduce((n,g)=>n+(g.members||0),0),qualified:unique.length,items,boards:groups.map(g=>({name:g.board.name,change:g.board.change,count:(g.items||[]).length})),failedBoards:failed.length,date,note:"扫描涨幅靠前的最多12个板块，每板块最多35只成分股。候选须满足箱体宽度不超过25%、近期振幅收敛及趋势条件；无合格标的不凑数。"}
+ return json({ok:true,scanned:groups.reduce((n,g)=>n+(g.members||0),0),qualified:unique.length,items,boards:groups.map(g=>({name:g.board.name,change:g.board.change,count:(g.items||[]).length})),failedBoards:failed.length,date,note:"扫描涨幅靠前的最多8个板块，每板块最多15只成分股，先控制请求量以避免行情接口长时间无响应。候选须满足箱体宽度不超过25%、近期振幅收敛及趋势条件；无合格标的不凑数。"}
  )}catch(e){return json({ok:false,error:"扫描失败："+e.message},502)}}
