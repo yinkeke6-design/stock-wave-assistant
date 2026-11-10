@@ -36,7 +36,7 @@ function extractDoc(html,link,source){
  if(!substantive||NOISE.test(title)||!POLICY.test(title))return null;
  const tools=["财政资金/补贴","税收支持","政府采购","重大项目/投资","试点示范","标准/监管","金融支持"].filter(x=>({ "财政资金/补贴":/财政资金|专项资金|补贴|奖补/.test(body),"税收支持":/税收|税费|加计扣除/.test(body),"政府采购":/政府采购/.test(body),"重大项目/投资":/重大项目|投资建设|基础设施建设/.test(body),"试点示范":/试点|示范/.test(body),"标准/监管":/标准体系|监管|准入/.test(body),"金融支持":/信贷|融资|金融支持/.test(body)})[x]);
  const summary=body.slice(0,260)+(body.length>260?"…":"");
- return{title,url:link.url,source,date,policyType:"正式文件线索（需核对原文效力）",themes,tools,summary,bodyLength:body.length};
+ return{title,url:link.url,source,date,policyType:"政策文件候选（需核对原文效力）",themes,tools,summary,bodyLength:body.length};
 }
 export async function onRequestGet(){
  const errors=[];
