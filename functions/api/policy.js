@@ -23,7 +23,23 @@ function classify(text){const hits=[];for(const [theme,words] of THEMES){const m
 function dateFrom(s){const m=String(s).match(/20\d{2}[年./-]\d{1,2}[月./-]\d{1,2}日?/);return m?m[0]:""}
 function absolute(href,base){try{return new URL(href,base).href}catch{return""}}
 async function fetchPage(url){const r=await fetch(url,{headers:{"User-Agent":"Mozilla/5.0 (compatible; ASharePolicyBot/1.0)","Accept":"text/html,application/xhtml+xml"},signal:AbortSignal.timeout(8000)});if(!r.ok)throw new Error("政策网站 HTTP "+r.status);return await r.text()}
-function getLinks(html,base){const out=[];const re=/<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;let m;while((m=re.exec(html))!==null){const title=clean(m[2]),url=absolute(m[1],base);if(title.length<8||title.length>100||!POLICY.test(title)||NOISE.test(title))continue;if(!url||!/(^|\.)gov\.cn$/.test(new URL(url).hostname)||url===base)continue;if(!/(\/zhengce\/|\/xinwen\/|\.gov\.cn\/)/.test(url))continue;out.push({title,url})}return [...new Map(out.map(x=>[x.url,x])).values()]}
+function getLinks(html,base){
+ const out=[];
+ const re=/<a\\b[^>]*href=["']([^"']+)["'][^>]*>([\\s\\S]*?)<\\/a>/gi;
+ const allowedTitle=/^(国务院|国务院办公厅|中共中央|中共中央办公厅|国家发展改革委|财政部|工业和信息化部|国家能源局|国家数据局|国家卫生健康委).{0,80}(关于|发布|印发|公布|制定|实施|条例|办法|规定|规划|方案|意见|通知|决定)/;
+ const formalEnd=/(条例|办法|规定|规划纲要|行动计划|实施方案|指导意见|若干措施|决定|通知|意见)$/;
+ while(true){
+  const m=re.exec(html);if(!m)break;
+  const title=clean(m[2]),url=absolute(m[1],base);
+  if(title.length<8||title.length>100||NOISE.test(title)||/选举|节假日|放假|答记者问|新闻发布会|政策文件库|查询|征集|征求意见|解读|调研|考察|以人民为中心/.test(title))continue;
+  if(!url||!/(^|\\.)gov\\.cn$/.test(new URL(url).hostname)||url===base)continue;
+  const path=new URL(url).pathname;
+  if(!path.includes("/zhengce/content/"))continue;
+  if(!(allowedTitle.test(title)||formalEnd.test(title)))continue;
+  out.push({title,url});
+ }
+ return [...new Map(out.map(x=>[x.url,x])).values()];
+}
 function extractDoc(html,link,source){
  const title=clean((html.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/i)||[])[1]||(html.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i)||[])[1]||link.title);
  const date= dateFrom(html.match(/20\d{2}[年./-]\d{1,2}[月./-]\d{1,2}日?/ )?.[0]||"");
@@ -44,8 +60,8 @@ export async function onRequestGet(){
   try{
    const html=await fetchPage(source.url),links=getLinks(html,source.url).slice(0,12);
    const docs=await Promise.all(links.map(async link=>{try{return extractDoc(await fetchPage(link.url),link,source.name)}catch{return null}}));
-   const items=docs.filter(Boolean).slice(0,10);
-   if(items.length)return Response.json({ok:true,source:source.name,items,updatedAt:new Date().toISOString(),note:"已尝试读取政策原文并按正文关键词归类。行业标签是程序辅助识别，不代表官方认定；政策力度、适用对象和上市公司受益关系仍需逐条核实。原文无法读取或正文不足的条目不展示。"}, {headers:{"cache-control":"public, max-age=900"}});
+   const items=docs.filter(Boolean).slice(0,8);
+   if(items.length)return Response.json({ok:true,source:source.name,items,updatedAt:new Date().toISOString(),note:"已尝试读取政策原文并按正文关键词归类。行业标签是程序辅助识别，不代表官方认定；政策力度、适用对象和上市公司受益关系仍需逐条核实。仅展示正式政策正文页面候选，新闻、调研、节假日、答记者问、征求意见及政策导航页面会被过滤；原文无法读取或正文不足的条目不展示。"}, {headers:{"cache-control":"public, max-age=900"}});
    errors.push(source.name+"：未能从页面链接中提取到足够完整的政策正文");
   }catch(e){errors.push(source.name+"："+(e?.message||"请求失败"))}
  }
