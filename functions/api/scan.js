@@ -6,7 +6,8 @@ async function getJson(url){const urls=[url];if(url.startsWith(BASE+"/"))urls.pu
 function secid(code){return (/^(6|5|9)/.test(code)?"1.":"0.")+code}
 function mean(a){return a.length?a.reduce((s,x)=>s+x,0)/a.length:0}
 async function pool(items,limit,fn){const out=new Array(items.length);let next=0;await Promise.all(Array.from({length:limit},async()=>{while(true){const i=next++;if(i>=items.length)return;try{out[i]=await fn(items[i],i)}catch{out[i]=null}}}));return out}
-async function kline(code){const url=HIST+"/api/qt/stock/kline/get?secid="+secid(code)+"&klt=101&fqt=1&beg=20250101&end=20500101&lmt=130&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61";const h=await getJson(url);return(h?.data?.klines||[]).map(k=>k.split(","))}
+let latestMarketDate="";
+async function kline(code){const url=HIST+"/api/qt/stock/kline/get?secid="+secid(code)+"&klt=101&fqt=1&beg=20250101&end=20500101&lmt=130&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61";const h=await getJson(url);const rows=(h?.data?.klines||[]).map(k=>k.split(","));const d=rows.at(-1)?.[0]||"";if(d&&d>latestMarketDate)latestMarketDate=d;return rows}
 function analyze(rows,q,b){
  if(rows.length<85)return null;
  const a=rows.map(r=>({date:r[0],close:+r[2],high:+r[3],low:+r[4],vol:+r[5]||0})).filter(x=>x.close>0&&x.high>0&&x.low>0);
@@ -36,7 +37,7 @@ function analyze(rows,q,b){
  if(change>7){score-=8;why.push("当日涨幅偏大，谨防追高")}
  return{code:String(q.f12),name:String(q.f14),price:Number(q.f2),change,score,stage,board:b.name,boxHigh:Number(hi.toFixed(2)),boxLow:Number(lo.toFixed(2)),boxDays:hist.length,boxWidth:Number((width*100).toFixed(1)),volumeRatio:Number((v20?v5/v20:0).toFixed(2)),contraction:Number(contraction.toFixed(2)),date:last.date,reason:why.join("；")+"。历史形态初筛，需人工核对。"}
 }
-export async function onRequestGet({request}){const u=new URL(request.url);if(!u.pathname.endsWith("/api/scan"))return json({ok:false,error:"Not found"},404);try{
+export async function onRequestGet({request}){latestMarketDate="";const u=new URL(request.url);if(!u.pathname.endsWith("/api/scan"))return json({ok:false,error:"Not found"},404);try{
  const boardUrl=BASE+"/api/qt/clist/get?pn=1&pz=500&po=1&np=1&fltt=2&invt=2&fid=f3&fs=m:90+t:2,m:90+t:3&fields=f12,f14,f2,f3,f5,f6,f8";
  let br;try{br=await getJson(boardUrl)}catch(e){throw new Error("获取强势板块列表失败："+e.message)}
  const boards=(br?.data?.diff||[]).filter(x=>x.f12&&x.f14&&Number(x.f2)>0).sort((a,b)=>(Number(b.f3)||0)-(Number(a.f3)||0)).slice(0,12).map(x=>({code:String(x.f12),name:String(x.f14),change:Number(x.f3)||0}));
@@ -53,6 +54,6 @@ export async function onRequestGet({request}){const u=new URL(request.url);if(!u
  const all=groups.flatMap(g=>g.items||[]).sort((a,b)=>b.score-a.score),unique=[...new Map(all.map(x=>[x.code,x])).values()];
  const stages=["即将突破观察","刚刚放量突破","突破回踩确认"];
  const items=stages.flatMap(s=>unique.filter(x=>x.stage===s).sort((a,b)=>b.score-a.score).slice(0,15));
- const date=groups.flatMap(g=>g.items||[]).map(x=>x.date).filter(Boolean).sort().at(-1)||"—";
+ const date=latestMarketDate||groups.flatMap(g=>g.items||[]).map(x=>x.date).filter(Boolean).sort().at(-1)||"—";
  return json({ok:true,scanned:groups.reduce((n,g)=>n+(g.members||0),0),qualified:unique.length,items,boards:groups.map(g=>({name:g.board.name,change:g.board.change,count:(g.items||[]).length})),failedBoards:failed.length,date,note:"扫描涨幅靠前的最多12个板块，每板块最多35只成分股。候选须满足箱体宽度不超过25%、近期振幅收敛及趋势条件；无合格标的不凑数。"}
  )}catch(e){return json({ok:false,error:"扫描失败："+e.message},502)}}
